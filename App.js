@@ -13,6 +13,9 @@ import Sentiment from "sentiment";
 import emojiSent from "emoji-sentiment";
 import randomItem from "random-item";
 import { emojiData } from "unicode-emoji-data";
+import { Notifications } from "expo";
+import * as Permissions from "expo-permissions";
+import Constants from "expo-constants";
 import Header from "./Header";
 
 export default class App extends React.Component {
@@ -24,6 +27,15 @@ export default class App extends React.Component {
 
   componentDidMount() {
     this.sentAnalyzer = new Sentiment();
+    this.setEmojis();
+    this.setState({
+      botThinking: false,
+      messages: [{ sender: "/b/stupid-bot", message: "Hi!", key: "first" }]
+    });
+    this.pushNotif("Welcome. Talk to me, please!");
+  }
+
+  setEmojis() {
     this.emojiSent = emojiSent
       .map(emoji => {
         let foundEmoji = emojiData.find(
@@ -48,10 +60,6 @@ export default class App extends React.Component {
             name.toLowerCase().includes("hand") ||
             name.toLowerCase().includes("man"))
       );
-    this.setState({
-      botThinking: false,
-      messages: [{ sender: "/b/stupid-bot", message: "Hi!", key: "first" }]
-    });
   }
 
   transformRange = val => {
@@ -110,6 +118,31 @@ export default class App extends React.Component {
       }
     );
   };
+
+  async pushNotif(body) {
+    if (Constants.isDevice) {
+      const { status: existingStatus } = await Permissions.getAsync(
+        Permissions.NOTIFICATIONS
+      );
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Permissions.askAsync(
+          Permissions.NOTIFICATIONS
+        );
+        finalStatus = status;
+      }
+      if (finalStatus !== "granted") {
+        alert("Failed to get push token for push notification!");
+        return;
+      }
+      await Notifications.presentLocalNotificationAsync({
+        title: "Chat-it reminder",
+        body
+      });
+    } else {
+      alert("Must use physical device for Push Notifications");
+    }
+  }
 
   renderItem({ item }) {
     return (
